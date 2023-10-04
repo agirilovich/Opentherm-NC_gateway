@@ -160,14 +160,14 @@ void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel
 
     sprintf(MessageBuf, "%d", int(RoomTemperature));
     mqtt.publish(MQTTTrTopicState, MessageBuf, false);
+
+    Serial.println("Done");
   
   }
   else {
     Serial.println("Unable to connect to MQTT broker");
     Serial.println("Cycle is skipped");
-    Serial.print("Number of failed attempts in a chain: ");
   }
   mqtt.disconnect();
-  Serial.println("Done");
 }
 

@@ -14,7 +14,12 @@
 #include <esp_task_wdt.h>
 #define WDT_TIMEOUT 60
 
-#define LED_BUILTIN 22
+
+//Port if Built-in LED
+#define LED_BUILTIN 2
+
+//Port of relay shield
+#define RELAY_PORT D1
 
 //Global variables in Master<>Slave communication
 float SetPoint = 0;
@@ -65,7 +70,13 @@ void processRequest(unsigned long request, OpenThermResponseStatus status) {
         Serial.println("Responded data: " + String(data));
         if (chEnable) {
           CHActive = true;
+          digitalWrite(RELAY_PORT, LOW);
         }
+        else {
+          CHActive = false;
+          digitalWrite(RELAY_PORT, HIGH);
+        }
+
         break;
       }
 
@@ -251,6 +262,9 @@ void setup()
 
   pinMode(LED_BUILTIN, OUTPUT);
 
+  pinMode(RELAY_PORT, OUTPUT);
+  digitalWrite(RELAY_PORT, HIGH);
+
   esp_reset_reason_t reason = esp_reset_reason();
   switch (reason) {
     case ESP_RST_POWERON:
@@ -272,9 +286,9 @@ void setup()
 
   while (esp_task_wdt_status(NULL) != ESP_OK) {
     // LED blinks indefinitely
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(500);
     digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
     delay(500);
   }
 
@@ -291,7 +305,7 @@ void setup()
   initMQTT();
 
   //Setup Hardware Timer for MQTT publish
-  Timer0_Cfg = timerBegin(0, 200, true);
+  Timer0_Cfg = timerBegin(0, 300, true);
   timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
   timerAlarmWrite(Timer0_Cfg, 10000000, true);
   timerAlarmEnable(Timer0_Cfg);
@@ -305,8 +319,10 @@ void loop()
   ot.process();
   if (publishMQTT)
   {
+    digitalWrite(LED_BUILTIN, HIGH);
     MQTTMessageCallback(SetPoint, CHActive, MaxModulationLevel, RoomSetPoint, RoomTemperature);
+    digitalWrite(LED_BUILTIN, LOW);
     publishMQTT = false;
+    esp_task_wdt_reset();
   }
-  esp_task_wdt_reset();
 }
