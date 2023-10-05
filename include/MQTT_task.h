@@ -27,6 +27,10 @@
 #define MQTT_TRSET_TOPIC_STATE MQTT_TOPIC_STATE "/TrSet/state"
 #define MQTT_ROOMTEMP_TOPIC_STATE MQTT_TOPIC_STATE "/Tr/state"
 
+#define MQTT_OUTSIDETEMP_TOPIC_STATE "girilowicz/RFLink32/RTL_433toMQTT/LaCrosse-TX141W/0/505272"
+
+extern float OutsideTemperature;
+
 void initMQTT();
 
 void initializeMQTTTopic(const char *Topic, char *SensorConfig);
@@ -34,5 +38,7 @@ void initializeMQTTTopic(const char *Topic, char *SensorConfig);
 void publishMQTTPayload(const char *Topic, char *PayloadMessage);
 
 void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature);
+
+void MQTTLoop();
 
 

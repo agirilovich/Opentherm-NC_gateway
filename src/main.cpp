@@ -220,10 +220,9 @@ void processRequest(unsigned long request, OpenThermResponseStatus status) {
       //message ID 27 Outside temperature
       case OpenThermMessageID::Toutside:
       {
-        float OutsideTemperature = 10;
         data = ot.temperatureToData(OutsideTemperature);
         Serial.println("Requested  outside temperature");
-        Serial.println("Sent constant " + String(OutsideTemperature) + " C");
+        Serial.println("Sent " + String(OutsideTemperature) + " C");
         response = ot.buildResponse(OpenThermMessageType::READ_ACK, id, data);
         break;
       }
@@ -317,6 +316,7 @@ void setup()
 void loop()
 {
   ot.process();
+  MQTTLoop();
   if (publishMQTT)
   {
     digitalWrite(LED_BUILTIN, HIGH);

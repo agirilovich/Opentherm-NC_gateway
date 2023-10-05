@@ -17,6 +17,8 @@ const char *MQTTMaxRelModLevelSettingTopicState = MQTT_MAXMODLEVEL_TOPIC_STATE;
 const char *MQTTTrSetTopicState = MQTT_TRSET_TOPIC_STATE;
 const char *MQTTTrTopicState = MQTT_ROOMTEMP_TOPIC_STATE;
 
+const char *MQTTOutsideTemperatureTopicState = MQTT_OUTSIDETEMP_TOPIC_STATE;
+
 const char *mqtt_host = mqtt_server;
 const int mqtt_port = 1883;
 const char *mqtt_user = mqtt_username;
@@ -25,6 +27,7 @@ const char *mqtt_pass = mqtt_password;
 //Define objects for MQTT messages in JSON format
 #include <ArduinoJson.h>
 StaticJsonDocument<512> JsonSensorConfig;
+
 char Buffer[1024];
 
 WiFiClient client;
@@ -32,6 +35,20 @@ WiFiClient client;
 #include <PubSubClient.h>
 PubSubClient mqtt(client);
 
+float OutsideTemperature = 0;
+
+void CallbackMQTTmessage(char* topic, byte* payload, unsigned int length)
+{
+  StaticJsonDocument<512> JsonTemperaturePayload;
+  deserializeJson(JsonTemperaturePayload, (const byte*)payload, length);
+  float temp = JsonTemperaturePayload["temperature_C"];
+  if (temp != 0) {
+    Serial.print("Outdoor Temperature Message arrived [ ");
+    OutsideTemperature = temp;
+    Serial.print(temp);
+    Serial.println(" C ] ");
+  }
+}
 
 void initMQTT()
 {
@@ -121,6 +138,10 @@ void initMQTT()
   serializeJson(JsonSensorConfig, Buffer);
   initializeMQTTTopic(MQTTTrTopicConfig, Buffer);
 
+  //Subscribe on Outside temperature sensor state
+  mqtt.setCallback(CallbackMQTTmessage);
+  mqtt.subscribe(MQTTOutsideTemperatureTopicState);
+
 }
 
 void initializeMQTTTopic(const char *Topic, char *SensorConfig)
@@ -143,7 +164,7 @@ void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel
   char MessageBuf[16];
   //Publish MQTT messages
   Serial.println("Publishing MQTT messages...");
-  mqtt.connect(DEVICE_BOARD_NAME, mqtt_user, mqtt_pass);
+  //mqtt.connect(DEVICE_BOARD_NAME, mqtt_user, mqtt_pass);
   if (mqtt.connected()) {
 
     sprintf(MessageBuf, "%d", int(SetPoint));
@@ -167,7 +188,15 @@ void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel
   else {
     Serial.println("Unable to connect to MQTT broker");
     Serial.println("Cycle is skipped");
+    Serial.println("Trying to reconnect");
+    initMQTT();
+
   }
-  mqtt.disconnect();
+  //mqtt.disconnect();
+}
+
+void MQTTLoop()
+{
+  mqtt.loop();
 }
 
