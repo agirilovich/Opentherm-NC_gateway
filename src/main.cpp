@@ -23,7 +23,7 @@
 
 //Global variables in Master<>Slave communication
 float SetPoint = 0;
-bool CHActive = false;
+bool FlameOn = false;
 float MaxModulationLevel = 0;
 float RoomSetPoint = 0;
 float RoomTemperature = 0;
@@ -64,19 +64,20 @@ void processRequest(unsigned long request, OpenThermResponseStatus status) {
         uint8_t chEnable = statusRequest & 0x1;
         Serial.println("chEnable: " + String(chEnable));
         data &= 0xFF00;
-        if (chEnable) data |= 0x02; //CH active
-        if (chEnable) data |= 0x08; //flame on
+        if (chEnable) {
+          data |= 0x02; //CH active
+          data |= 0x08; //flame on
+          FlameOn = true;
+          digitalWrite(RELAY_PORT, LOW);
+          Serial.println("Flame is On");
+        } 
+        else {
+          FlameOn = false;
+          digitalWrite(RELAY_PORT, HIGH);
+          Serial.println("Flame is Off");
+        }
         response = ot.buildResponse(OpenThermMessageType::READ_ACK, id, data);
         Serial.println("Responded data: " + String(data));
-        if (chEnable) {
-          CHActive = true;
-          digitalWrite(RELAY_PORT, LOW);
-        }
-        else {
-          CHActive = false;
-          digitalWrite(RELAY_PORT, HIGH);
-        }
-
         break;
       }
 
@@ -320,7 +321,7 @@ void loop()
   if (publishMQTT)
   {
     digitalWrite(LED_BUILTIN, HIGH);
-    MQTTMessageCallback(SetPoint, CHActive, MaxModulationLevel, RoomSetPoint, RoomTemperature);
+    MQTTMessageCallback(SetPoint, FlameOn, MaxModulationLevel, RoomSetPoint, RoomTemperature);
     digitalWrite(LED_BUILTIN, LOW);
     publishMQTT = false;
     esp_task_wdt_reset();

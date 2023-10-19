@@ -4,7 +4,7 @@
 
 //Define MQTT Topic for HomeAssistant Discovery
 const char *MQTTTSetTopicConfig = MQTT_TOPIC_TSET_CONFIG;
-const char *MQTTchEnableTopicConfig = MQTT_TOPIC_CHENABLE_CONFIG;
+const char *MQTTFlameOnTopicConfig = MQTT_TOPIC_FLAMEON_CONFIG;
 const char *MQTTMaxRelModLevelSettingTopicConfig = MQTT_TOPIC_MAXMODLEVEL_CONFIG;
 const char *MQTTTrSetTopicConfig = MQTT_TOPIC_TRSET_CONFIG;
 const char *MQTTTrTopicConfig = MQTT_TOPIC_ROOMTEMP_CONFIG;
@@ -12,7 +12,7 @@ const char *MQTTTrTopicConfig = MQTT_TOPIC_ROOMTEMP_CONFIG;
 
 //Define MQTT Topic for HomeAssistant Sensor state
 const char *MQTTTSetTopicState = MQTT_TSET_TOPIC_STATE;
-const char *MQTTchEnableTopicState = MQTT_CHENABLE_TOPIC_STATE;
+const char *MQTTFlameOnTopicState = MQTT_FLAMEON_TOPIC_STATE;
 const char *MQTTMaxRelModLevelSettingTopicState = MQTT_MAXMODLEVEL_TOPIC_STATE;
 const char *MQTTTrSetTopicState = MQTT_TRSET_TOPIC_STATE;
 const char *MQTTTrTopicState = MQTT_ROOMTEMP_TOPIC_STATE;
@@ -94,16 +94,16 @@ void initMQTT()
   serializeJson(JsonSensorConfig, Buffer);
   initializeMQTTTopic(MQTTTSetTopicConfig, Buffer);
 
-  //CH active sensor
-  JsonSensorConfig["name"] = "CH active";
+  //Flame sensor
+  JsonSensorConfig["name"] = "Flame On";
   JsonSensorConfig["device_class"] = "heat";
   JsonSensorConfig["state_class"] = "";
   JsonSensorConfig["unit_of_measurement"] = "";
-  JsonSensorConfig["uniq_id"] = "chactivestate";
-  JsonSensorConfig["state_topic"] = MQTTchEnableTopicState;
+  JsonSensorConfig["uniq_id"] = "FlameOnstate";
+  JsonSensorConfig["state_topic"] = MQTTFlameOnTopicState;
 
   serializeJson(JsonSensorConfig, Buffer);
-  initializeMQTTTopic(MQTTchEnableTopicConfig, Buffer);
+  initializeMQTTTopic(MQTTFlameOnTopicConfig, Buffer);
 
   //Maximum relative modulation level setting
   JsonSensorConfig["name"] = "Max modulation level";
@@ -159,7 +159,7 @@ void initializeMQTTTopic(const char *Topic, char *SensorConfig)
   //Gracefully close connection to MQTT broker
 }
 
-void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature)
+void MQTTMessageCallback(float SetPoint, bool FlameOn, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature)
 {
   char MessageBuf[16];
   //Publish MQTT messages
@@ -170,8 +170,8 @@ void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel
     sprintf(MessageBuf, "%d", int(SetPoint));
     mqtt.publish(MQTTTSetTopicState, MessageBuf, false);
 
-    sprintf(MessageBuf, "%s", CHActive?"ON":"OFF");
-    mqtt.publish(MQTTchEnableTopicState, MessageBuf, false);
+    sprintf(MessageBuf, "%s", FlameOn?"ON":"OFF");
+    mqtt.publish(MQTTFlameOnTopicState, MessageBuf, false);
 
     sprintf(MessageBuf, "%d", int(MaxModulationLevel));
     mqtt.publish(MQTTMaxRelModLevelSettingTopicState, MessageBuf, false);
