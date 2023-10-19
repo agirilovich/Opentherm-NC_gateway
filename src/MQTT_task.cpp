@@ -4,7 +4,7 @@
 
 //Define MQTT Topic for HomeAssistant Discovery
 const char *MQTTTSetTopicConfig = MQTT_TOPIC_TSET_CONFIG;
-const char *MQTTchEnableTopicConfig = MQTT_TOPIC_CHENABLE_CONFIG;
+const char *MQTTFlameOnTopicConfig = MQTT_TOPIC_FLAMEON_CONFIG;
 const char *MQTTMaxRelModLevelSettingTopicConfig = MQTT_TOPIC_MAXMODLEVEL_CONFIG;
 const char *MQTTTrSetTopicConfig = MQTT_TOPIC_TRSET_CONFIG;
 const char *MQTTTrTopicConfig = MQTT_TOPIC_ROOMTEMP_CONFIG;
@@ -12,10 +12,12 @@ const char *MQTTTrTopicConfig = MQTT_TOPIC_ROOMTEMP_CONFIG;
 
 //Define MQTT Topic for HomeAssistant Sensor state
 const char *MQTTTSetTopicState = MQTT_TSET_TOPIC_STATE;
-const char *MQTTchEnableTopicState = MQTT_CHENABLE_TOPIC_STATE;
+const char *MQTTFlameOnTopicState = MQTT_FLAMEON_TOPIC_STATE;
 const char *MQTTMaxRelModLevelSettingTopicState = MQTT_MAXMODLEVEL_TOPIC_STATE;
 const char *MQTTTrSetTopicState = MQTT_TRSET_TOPIC_STATE;
 const char *MQTTTrTopicState = MQTT_ROOMTEMP_TOPIC_STATE;
+
+const char *MQTTOutsideTemperatureTopicState = MQTT_OUTSIDETEMP_TOPIC_STATE;
 
 const char *mqtt_host = mqtt_server;
 const int mqtt_port = 1883;
@@ -25,6 +27,7 @@ const char *mqtt_pass = mqtt_password;
 //Define objects for MQTT messages in JSON format
 #include <ArduinoJson.h>
 StaticJsonDocument<512> JsonSensorConfig;
+
 char Buffer[1024];
 
 WiFiClient client;
@@ -32,6 +35,20 @@ WiFiClient client;
 #include <PubSubClient.h>
 PubSubClient mqtt(client);
 
+float OutsideTemperature = 0;
+
+void CallbackMQTTmessage(char* topic, byte* payload, unsigned int length)
+{
+  StaticJsonDocument<512> JsonTemperaturePayload;
+  deserializeJson(JsonTemperaturePayload, (const byte*)payload, length);
+  float temp = JsonTemperaturePayload["temperature_C"];
+  if (temp != 0) {
+    Serial.print("Outdoor Temperature Message arrived [ ");
+    OutsideTemperature = temp;
+    Serial.print(temp);
+    Serial.println(" C ] ");
+  }
+}
 
 void initMQTT()
 {
@@ -77,16 +94,16 @@ void initMQTT()
   serializeJson(JsonSensorConfig, Buffer);
   initializeMQTTTopic(MQTTTSetTopicConfig, Buffer);
 
-  //CH active sensor
-  JsonSensorConfig["name"] = "CH active";
+  //Flame sensor
+  JsonSensorConfig["name"] = "Flame On";
   JsonSensorConfig["device_class"] = "heat";
   JsonSensorConfig["state_class"] = "";
   JsonSensorConfig["unit_of_measurement"] = "";
-  JsonSensorConfig["uniq_id"] = "chactivestate";
-  JsonSensorConfig["state_topic"] = MQTTchEnableTopicState;
+  JsonSensorConfig["uniq_id"] = "FlameOnstate";
+  JsonSensorConfig["state_topic"] = MQTTFlameOnTopicState;
 
   serializeJson(JsonSensorConfig, Buffer);
-  initializeMQTTTopic(MQTTchEnableTopicConfig, Buffer);
+  initializeMQTTTopic(MQTTFlameOnTopicConfig, Buffer);
 
   //Maximum relative modulation level setting
   JsonSensorConfig["name"] = "Max modulation level";
@@ -121,6 +138,10 @@ void initMQTT()
   serializeJson(JsonSensorConfig, Buffer);
   initializeMQTTTopic(MQTTTrTopicConfig, Buffer);
 
+  //Subscribe on Outside temperature sensor state
+  mqtt.setCallback(CallbackMQTTmessage);
+  mqtt.subscribe(MQTTOutsideTemperatureTopicState);
+
 }
 
 void initializeMQTTTopic(const char *Topic, char *SensorConfig)
@@ -138,19 +159,19 @@ void initializeMQTTTopic(const char *Topic, char *SensorConfig)
   //Gracefully close connection to MQTT broker
 }
 
-void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature)
+void MQTTMessageCallback(float SetPoint, bool FlameOn, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature)
 {
   char MessageBuf[16];
   //Publish MQTT messages
   Serial.println("Publishing MQTT messages...");
-  mqtt.connect(DEVICE_BOARD_NAME, mqtt_user, mqtt_pass);
+  //mqtt.connect(DEVICE_BOARD_NAME, mqtt_user, mqtt_pass);
   if (mqtt.connected()) {
 
     sprintf(MessageBuf, "%d", int(SetPoint));
     mqtt.publish(MQTTTSetTopicState, MessageBuf, false);
 
-    sprintf(MessageBuf, "%s", CHActive?"ON":"OFF");
-    mqtt.publish(MQTTchEnableTopicState, MessageBuf, false);
+    sprintf(MessageBuf, "%s", FlameOn?"ON":"OFF");
+    mqtt.publish(MQTTFlameOnTopicState, MessageBuf, false);
 
     sprintf(MessageBuf, "%d", int(MaxModulationLevel));
     mqtt.publish(MQTTMaxRelModLevelSettingTopicState, MessageBuf, false);
@@ -160,14 +181,22 @@ void MQTTMessageCallback(float SetPoint, bool CHActive, float MaxModulationLevel
 
     sprintf(MessageBuf, "%d", int(RoomTemperature));
     mqtt.publish(MQTTTrTopicState, MessageBuf, false);
+
+    Serial.println("Done");
   
   }
   else {
     Serial.println("Unable to connect to MQTT broker");
     Serial.println("Cycle is skipped");
-    Serial.print("Number of failed attempts in a chain: ");
+    Serial.println("Trying to reconnect");
+    initMQTT();
+
   }
-  mqtt.disconnect();
-  Serial.println("Done");
+  //mqtt.disconnect();
+}
+
+void MQTTLoop()
+{
+  mqtt.loop();
 }
 
