@@ -54,94 +54,88 @@ void initMQTT()
 {
   Serial.print("Connecting to MQTT broker host: ");
   Serial.println(mqtt_host);
-  while (!client.connect(mqtt_host, mqtt_port))
+  if (!client.connect(mqtt_host, mqtt_port))
   {
-    Serial.print(".");
-    delay(1000);
+    Serial.println("Connected to MQTT host!");
+  
+    //Initialise MQTT autodiscovery topic and sensor
+    mqtt.setServer(mqtt_host, mqtt_port);
+
+    Serial.print("Testing connection to mqtt broker...");
+    if (mqtt.connect(DEVICE_BOARD_NAME, mqtt_user, mqtt_pass))
+    {
+      Serial.println(" connected!");
+
+      //CH water temp. setpoint
+      JsonSensorConfig["name"] = "CH water temp. setpoint";
+      JsonSensorConfig["device_class"] = "temperature";
+      JsonSensorConfig["state_class"] = "measurement";
+      JsonSensorConfig["unit_of_measurement"] = "C";
+      JsonSensorConfig["uniq_id"] = "chwatersetpointC";
+      JsonSensorConfig["state_topic"] = MQTTTSetTopicState;
+
+      JsonObject device  = JsonSensorConfig.createNestedObject("device");
+      device["identifiers"][0] = "openthermgw000";
+      device["connections"][0][0] = "mac";
+      device["connections"][0][1] = "08:B6:1F:33:7D:AC";
+      device["model"] = "OP-GW-01";
+      device["name"] = SENSOR_NAME;
+      device["manufacturer"] = "Aliexpress"; 
+      device["sw_version"] = "1.0";  
+      serializeJson(JsonSensorConfig, Buffer);
+      initializeMQTTTopic(MQTTTSetTopicConfig, Buffer);
+
+      //Flame sensor
+      JsonSensorConfig["name"] = "Flame On";
+      JsonSensorConfig["device_class"] = "heat";
+      JsonSensorConfig["state_class"] = "";
+      JsonSensorConfig["unit_of_measurement"] = "";
+      JsonSensorConfig["uniq_id"] = "FlameOnstate";
+      JsonSensorConfig["state_topic"] = MQTTFlameOnTopicState;
+
+      serializeJson(JsonSensorConfig, Buffer);
+      initializeMQTTTopic(MQTTFlameOnTopicConfig, Buffer);
+
+      //Maximum relative modulation level setting
+      JsonSensorConfig["name"] = "Max modulation level";
+      JsonSensorConfig["device_class"] = "power_factor";
+      JsonSensorConfig["state_class"] = "measurement";
+      JsonSensorConfig["unit_of_measurement"] = "%";
+      JsonSensorConfig["uniq_id"] = "chmaxmodulationlvl";
+      JsonSensorConfig["state_topic"] = MQTTMaxRelModLevelSettingTopicState;
+
+      serializeJson(JsonSensorConfig, Buffer);
+      initializeMQTTTopic(MQTTMaxRelModLevelSettingTopicConfig, Buffer);
+
+      //Room Setpoint sensor
+      JsonSensorConfig["name"] = "Room setpoint";
+      JsonSensorConfig["device_class"] = "temperature";
+      JsonSensorConfig["state_class"] = "measurement";
+      JsonSensorConfig["unit_of_measurement"] = "C";
+      JsonSensorConfig["uniq_id"] = "chroomsetpoint";
+      JsonSensorConfig["state_topic"] = MQTTTrSetTopicState;
+
+      serializeJson(JsonSensorConfig, Buffer);
+      initializeMQTTTopic(MQTTTrSetTopicConfig, Buffer);
+
+      //Room Temperature
+      JsonSensorConfig["name"] = "Room Temperature";
+      JsonSensorConfig["device_class"] = "temperature";
+      JsonSensorConfig["state_class"] = "measurement";
+      JsonSensorConfig["unit_of_measurement"] = "C";
+      JsonSensorConfig["uniq_id"] = "chroomtemperature";
+      JsonSensorConfig["state_topic"] = MQTTTrTopicState;
+
+      serializeJson(JsonSensorConfig, Buffer);
+      initializeMQTTTopic(MQTTTrTopicConfig, Buffer);
+
+      //Subscribe on Outside temperature sensor state
+      mqtt.setCallback(CallbackMQTTmessage);
+      mqtt.subscribe(MQTTOutsideTemperatureTopicState);
+    }
+  } else {
+    Serial.println("MQTT connection is not established, ignoring");
   }
-  Serial.println("Connected!");
-
-  //Initialise MQTT autodiscovery topic and sensor
-  mqtt.setServer(mqtt_host, mqtt_port);
-
-  Serial.print("Testing connection to mqtt broker...");
-  while (!mqtt.connect(DEVICE_BOARD_NAME, mqtt_user, mqtt_pass))
-  {
-    Serial.print(".");
-    delay(1000);
-  }
-
-  if (mqtt.connected()) {
-    Serial.println(" connected!");
-  } 
-
-  //CH water temp. setpoint
-  JsonSensorConfig["name"] = "CH water temp. setpoint";
-  JsonSensorConfig["device_class"] = "temperature";
-  JsonSensorConfig["state_class"] = "measurement";
-  JsonSensorConfig["unit_of_measurement"] = "C";
-  JsonSensorConfig["uniq_id"] = "chwatersetpointC";
-  JsonSensorConfig["state_topic"] = MQTTTSetTopicState;
-
-  JsonObject device  = JsonSensorConfig.createNestedObject("device");
-  device["identifiers"][0] = "openthermgw000";
-  device["connections"][0][0] = "mac";
-  device["connections"][0][1] = "08:B6:1F:33:7D:AC";
-  device["model"] = "OP-GW-01";
-  device["name"] = SENSOR_NAME;
-  device["manufacturer"] = "Aliexpress"; 
-  device["sw_version"] = "1.0";  
-  serializeJson(JsonSensorConfig, Buffer);
-  initializeMQTTTopic(MQTTTSetTopicConfig, Buffer);
-
-  //Flame sensor
-  JsonSensorConfig["name"] = "Flame On";
-  JsonSensorConfig["device_class"] = "heat";
-  JsonSensorConfig["state_class"] = "";
-  JsonSensorConfig["unit_of_measurement"] = "";
-  JsonSensorConfig["uniq_id"] = "FlameOnstate";
-  JsonSensorConfig["state_topic"] = MQTTFlameOnTopicState;
-
-  serializeJson(JsonSensorConfig, Buffer);
-  initializeMQTTTopic(MQTTFlameOnTopicConfig, Buffer);
-
-  //Maximum relative modulation level setting
-  JsonSensorConfig["name"] = "Max modulation level";
-  JsonSensorConfig["device_class"] = "power_factor";
-  JsonSensorConfig["state_class"] = "measurement";
-  JsonSensorConfig["unit_of_measurement"] = "%";
-  JsonSensorConfig["uniq_id"] = "chmaxmodulationlvl";
-  JsonSensorConfig["state_topic"] = MQTTMaxRelModLevelSettingTopicState;
-
-  serializeJson(JsonSensorConfig, Buffer);
-  initializeMQTTTopic(MQTTMaxRelModLevelSettingTopicConfig, Buffer);
-
-  //Room Setpoint sensor
-  JsonSensorConfig["name"] = "Room setpoint";
-  JsonSensorConfig["device_class"] = "temperature";
-  JsonSensorConfig["state_class"] = "measurement";
-  JsonSensorConfig["unit_of_measurement"] = "C";
-  JsonSensorConfig["uniq_id"] = "chroomsetpoint";
-  JsonSensorConfig["state_topic"] = MQTTTrSetTopicState;
-
-  serializeJson(JsonSensorConfig, Buffer);
-  initializeMQTTTopic(MQTTTrSetTopicConfig, Buffer);
-
-  //Room Temperature
-  JsonSensorConfig["name"] = "Room Temperature";
-  JsonSensorConfig["device_class"] = "temperature";
-  JsonSensorConfig["state_class"] = "measurement";
-  JsonSensorConfig["unit_of_measurement"] = "C";
-  JsonSensorConfig["uniq_id"] = "chroomtemperature";
-  JsonSensorConfig["state_topic"] = MQTTTrTopicState;
-
-  serializeJson(JsonSensorConfig, Buffer);
-  initializeMQTTTopic(MQTTTrTopicConfig, Buffer);
-
-  //Subscribe on Outside temperature sensor state
-  mqtt.setCallback(CallbackMQTTmessage);
-  mqtt.subscribe(MQTTOutsideTemperatureTopicState);
-
 }
 
 void initializeMQTTTopic(const char *Topic, char *SensorConfig)
@@ -159,7 +153,7 @@ void initializeMQTTTopic(const char *Topic, char *SensorConfig)
   //Gracefully close connection to MQTT broker
 }
 
-void MQTTMessageCallback(float SetPoint, bool FlameOn, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature)
+bool MQTTMessageCallback(float SetPoint, bool FlameOn, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature)
 {
   char MessageBuf[16];
   //Publish MQTT messages
@@ -190,9 +184,11 @@ void MQTTMessageCallback(float SetPoint, bool FlameOn, float MaxModulationLevel,
     Serial.println("Cycle is skipped");
     Serial.println("Trying to reconnect");
     initMQTT();
+    return(false);
 
   }
   //mqtt.disconnect();
+  return(true);
 }
 
 void MQTTLoop()
