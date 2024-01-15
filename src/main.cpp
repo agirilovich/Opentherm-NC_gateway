@@ -40,6 +40,8 @@ void IRAM_ATTR handleInterrupt() {
 }
 
 bool publishMQTT = false;
+int mqtt_num_attempts = 0;
+const int max_mqtt_attempts = 600;
 void IRAM_ATTR Timer0_ISR()
 {
   publishMQTT = true;
@@ -321,9 +323,20 @@ void loop()
   if (publishMQTT)
   {
     digitalWrite(LED_BUILTIN, HIGH);
-    MQTTMessageCallback(SetPoint, FlameOn, MaxModulationLevel, RoomSetPoint, RoomTemperature);
+    if (MQTTMessageCallback(SetPoint, FlameOn, MaxModulationLevel, RoomSetPoint, RoomTemperature))
+    {
+      mqtt_num_attempts = 0;
+    } else {
+      mqtt_num_attempts++;
+    }
     digitalWrite(LED_BUILTIN, LOW);
     publishMQTT = false;
+    
+  }
+  
+  //check if long time no mqtt publish
+  if (mqtt_num_attempts < max_mqtt_attempts)
+  {
     esp_task_wdt_reset();
   }
 }

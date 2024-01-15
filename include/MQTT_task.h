@@ -37,7 +37,7 @@ void initializeMQTTTopic(const char *Topic, char *SensorConfig);
 
 void publishMQTTPayload(const char *Topic, char *PayloadMessage);
 
-void MQTTMessageCallback(float SetPoint, bool FlameOn, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature);
+bool MQTTMessageCallback(float SetPoint, bool FlameOn, float MaxModulationLevel, float RoomSetPoint, float RoomTemperature);
 
 void MQTTLoop();
 
