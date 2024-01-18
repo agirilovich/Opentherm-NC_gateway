@@ -7,9 +7,9 @@
 
 #define DEVICE_HOSTNAME "OThermGW"
 
-#include "controlWiFi.h"
+//#include "controlWiFi.h"
 
-#include "MQTT_task.h"
+//#include "MQTT_task.h"
 
 #include <esp_task_wdt.h>
 #define WDT_TIMEOUT 60
@@ -39,13 +39,13 @@ void IRAM_ATTR handleInterrupt() {
     ot.handleInterrupt();
 }
 
-bool publishMQTT = false;
-int mqtt_num_attempts = 0;
-const int max_mqtt_attempts = 600;
-void IRAM_ATTR Timer0_ISR()
-{
-  publishMQTT = true;
-}
+//bool publishMQTT = false;
+//int mqtt_num_attempts = 0;
+//const int max_mqtt_attempts = 600;
+//void IRAM_ATTR Timer0_ISR()
+//{
+  //publishMQTT = true;
+//}
 
 void processRequest(unsigned long request, OpenThermResponseStatus status) {
     //Serial.println("T" + String(request, HEX)); //master/thermostat request
@@ -223,6 +223,7 @@ void processRequest(unsigned long request, OpenThermResponseStatus status) {
       //message ID 27 Outside temperature
       case OpenThermMessageID::Toutside:
       {
+        float OutsideTemperature = 0; //without mqtt usage
         data = ot.temperatureToData(OutsideTemperature);
         Serial.println("Requested  outside temperature");
         Serial.println("Sent " + String(OutsideTemperature) + " C");
@@ -297,20 +298,20 @@ void setup()
   Serial.print("Start WiFi on ");
   Serial.println(DEVICE_BOARD_NAME);
   
-  initializeWiFi(DEVICE_HOSTNAME);
+  //initializeWiFi(DEVICE_HOSTNAME);
   
-  establishWiFi();
+  //establishWiFi();
 
   // you're connected now, so print out the data
-  printWifiStatus();
+  //printWifiStatus();
 
-  initMQTT();
+  //initMQTT();
 
   //Setup Hardware Timer for MQTT publish
-  Timer0_Cfg = timerBegin(0, 300, true);
-  timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
-  timerAlarmWrite(Timer0_Cfg, 10000000, true);
-  timerAlarmEnable(Timer0_Cfg);
+  //Timer0_Cfg = timerBegin(0, 300, true);
+  //timerAttachInterrupt(Timer0_Cfg, &Timer0_ISR, true);
+  //timerAlarmWrite(Timer0_Cfg, 10000000, true);
+  //timerAlarmEnable(Timer0_Cfg);
 
   ot.begin(handleInterrupt, processRequest);
 }
@@ -318,25 +319,27 @@ void setup()
 
 void loop()
 {
+  digitalWrite(LED_BUILTIN, HIGH);
   ot.process();
-  MQTTLoop();
-  if (publishMQTT)
-  {
-    digitalWrite(LED_BUILTIN, HIGH);
-    if (MQTTMessageCallback(SetPoint, FlameOn, MaxModulationLevel, RoomSetPoint, RoomTemperature))
-    {
-      mqtt_num_attempts = 0;
-    } else {
-      mqtt_num_attempts++;
-    }
-    digitalWrite(LED_BUILTIN, LOW);
-    publishMQTT = false;
-    
-  }
+  digitalWrite(LED_BUILTIN, LOW);
+  //MQTTLoop();
+  //if (publishMQTT)
+  //{
+  //  digitalWrite(LED_BUILTIN, HIGH);
+  //  if (MQTTMessageCallback(SetPoint, FlameOn, MaxModulationLevel, RoomSetPoint, RoomTemperature))
+  //  {
+  //    mqtt_num_attempts = 0;
+  //  } else {
+  //    mqtt_num_attempts++;
+  //  }
+  //  digitalWrite(LED_BUILTIN, LOW);
+  //  publishMQTT = false;
+  //  
+ // }
   
   //check if long time no mqtt publish
-  if (mqtt_num_attempts < max_mqtt_attempts)
-  {
+  //if (mqtt_num_attempts < max_mqtt_attempts)
+  //{
     esp_task_wdt_reset();
-  }
+  //}
 }
