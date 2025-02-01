@@ -16,10 +16,10 @@
 
 
 //Port if Built-in LED
-#define LED_BUILTIN 2
+#define LED_BUILTIN 22
 
 //Port of relay shield
-#define RELAY_PORT D1
+#define RELAY_PORT 5
 
 //Global variables in Master<>Slave communication
 float SetPoint = 0;
@@ -31,9 +31,10 @@ float RoomTemperature = 0;
 hw_timer_t *Timer0_Cfg = NULL;
 
 
-const int inPin = 19;  //for Arduino, 12 for ESP8266 (D6), 19 for ESP32
-const int outPin = 23; //for Arduino, 13 for ESP8266 (D7), 23 for ESP32
+const int inPin = 23;  //for Arduino, 12 for ESP8266 (D6), 19 for ESP32
+const int outPin = 19; //for Arduino, 13 for ESP8266 (D7), 23 for ESP32
 OpenTherm ot(inPin, outPin, true);
+
 
 void IRAM_ATTR handleInterrupt() {
     ot.handleInterrupt();
@@ -244,7 +245,7 @@ void processRequest(unsigned long request, OpenThermResponseStatus status) {
 
       default:
       {
-        Serial.println("Undefined MessageID: " + String(id));
+        //Serial.println("Undefined MessageID: " + String(id));
         //Serial.println("data" + String(data));
         //Serial.println("f" + String(f));
         //build UNKNOWN-DATAID response
@@ -322,6 +323,7 @@ void loop()
   digitalWrite(LED_BUILTIN, HIGH);
   ot.process();
   digitalWrite(LED_BUILTIN, LOW);
+  delay(100);
   //MQTTLoop();
   //if (publishMQTT)
   //{
